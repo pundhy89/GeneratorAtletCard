@@ -1,0 +1,97 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Entity Validation: CardStat
+    function isValidCardStat(stat) {
+      return stat.keys().hasAll(['label', 'value', 'icon']) && stat.keys().size() == 3
+        && stat.label is string && stat.label.size() <= 100
+        && stat.value is string && stat.value.size() <= 100
+        && stat.icon is string && stat.icon.size() <= 100;
+    }
+
+    // Entity Validation: CardSkill
+    function isValidCardSkill(skill) {
+      return skill.keys().hasAll(['label', 'value']) && skill.keys().size() == 2
+        && skill.label is string && skill.label.size() <= 100
+        && skill.value is number;
+    }
+
+    // Entity Validation: CardData
+    function isValidCardData(data) {
+      return data.keys().hasAll(['teamName', 'tagline', 'playerName', 'age', 'quote', 'stats', 'highlights', 'skills', 'footerText', 'hashtag']) 
+        && data.keys().size() >= 10 && data.keys().size() <= 14
+        && data.teamName is string && data.teamName.size() <= 100
+        && data.tagline is string && data.tagline.size() <= 100
+        && data.playerName is string && data.playerName.size() <= 100
+        && data.age is string && data.age.size() <= 100
+        && data.quote is string && data.quote.size() <= 1000
+        && data.stats is list && data.stats.size() <= 10
+        && (data.stats.size() == 0 || isValidCardStat(data.stats[0]))
+        && data.highlights is list && data.highlights.size() <= 10
+        && (data.highlights.size() == 0 || (data.highlights[0] is string && data.highlights[0].size() <= 200))
+        && data.skills is list && data.skills.size() <= 10
+        && (data.skills.size() == 0 || isValidCardSkill(data.skills[0]))
+        && data.footerText is string && data.footerText.size() <= 200
+        && data.hashtag is string && data.hashtag.size() <= 100
+        && (!('logo' in data) || data.logo == null || (data.logo is string && data.logo.size() <= 1048000))
+        && (!('photo' in data) || data.photo == null || (data.photo is string && data.photo.size() <= 1048000))
+        && (!('highlightPhoto' in data) || data.highlightPhoto == null || (data.highlightPhoto is string && data.highlightPhoto.size() <= 1048000))
+        && (!('actionPhoto' in data) || data.actionPhoto == null || (data.actionPhoto is string && data.actionPhoto.size() <= 1048000));
+    }
+
+    // Entity Validation: SavedCard
+    function isValidSavedCard(card) {
+      return card.keys().hasAll(['id', 'ownerId', 'data', 'updatedAt', 'createdAt'])
+        && card.keys().size() == 5
+        && card.id is string
+        && card.ownerId is string && card.ownerId == request.auth.uid
+        && card.updatedAt is number
+        && card.createdAt is number
+        && card.data is map && isValidCardData(card.data);
+    }
+
+    match /cards/{cardId} {
+      allow get: if isSignedIn() && isValidId(cardId) && existing().ownerId == request.auth.uid;
+      
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      
+      allow create: if isSignedIn() && isValidId(cardId) 
+                    && isValidSavedCard(incoming())
+                    && incoming().updatedAt == incoming().createdAt;
+      
+      allow update: if (
+                      isSignedIn() && isValidId(cardId)
+                      && existing().ownerId == request.auth.uid
+                      && isValidSavedCard(incoming())
+                      && incoming().ownerId == existing().ownerId
+                      && incoming().createdAt == existing().createdAt
+                      && incoming().id == existing().id
+                    );
+                    
+      allow delete: if isSignedIn() && isValidId(cardId) && existing().ownerId == request.auth.uid;
+    }
+  }
+}

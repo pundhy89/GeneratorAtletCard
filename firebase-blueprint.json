@@ -1,0 +1,121 @@
+{
+  "entities": {
+    "CardStat": {
+      "title": "CardStat",
+      "description": "Stat value for a player",
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        }
+      },
+      "required": ["label", "value", "icon"]
+    },
+    "CardSkill": {
+      "title": "CardSkill",
+      "description": "Skill value for a player",
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": ["label", "value"]
+    },
+    "CardData": {
+      "title": "CardData",
+      "description": "Data representing a player card",
+      "type": "object",
+      "properties": {
+        "logo": {
+          "type": "string",
+          "description": "Base64 string or URL of logo"
+        },
+        "teamName": {
+          "type": "string"
+        },
+        "tagline": {
+          "type": "string"
+        },
+        "photo": {
+          "type": "string"
+        },
+        "playerName": {
+          "type": "string"
+        },
+        "age": {
+          "type": "string"
+        },
+        "quote": {
+          "type": "string"
+        },
+        "stats": {
+          "type": "array",
+          "items": {
+            "$ref": "#/entities/CardStat"
+          }
+        },
+        "highlightPhoto": {
+          "type": "string"
+        },
+        "highlights": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "skills": {
+          "type": "array",
+          "items": {
+            "$ref": "#/entities/CardSkill"
+          }
+        },
+        "footerText": {
+          "type": "string"
+        },
+        "hashtag": {
+          "type": "string"
+        },
+        "actionPhoto": {
+          "type": "string"
+        }
+      },
+      "required": ["teamName", "playerName"]
+    },
+    "SavedCard": {
+      "title": "SavedCard",
+      "description": "A saved card record",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string"
+        },
+        "data": {
+          "$ref": "#/entities/CardData"
+        },
+        "updatedAt": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "number"
+        }
+      },
+      "required": ["ownerId", "data", "updatedAt", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/cards/{cardId}": {
+      "schema": "#/entities/SavedCard",
+      "description": "A user's saved card"
+    }
+  }
+}
